@@ -1,0 +1,39 @@
+##### 1
+
+WITH PRICES_tmp(data, store, item, price, cog, category) AS (
+SELECT data, store, DB.PRICES.item, price, cog, category
+FROM DB.PRICES INNER JOIN DB.KEY_CATS
+ON DB.PRICES.item=DB.KEY_CATS.item
+)
+  
+
+SELECT DISTINCT category, SUM(PRICES_tmp.price * DB.SALES.qnt), SUM((PRICES_tmp.price * DB.SALES.qnt - PRICES_tmp.cog * DB.SALES.qnt)/PRICES_tmp.price * DB.SALES.qnt)
+FROM DB.SALES INNER JOIN PRICES_tmp
+ON DB.SALES.item=PRICES_tmp.item AND DB.SALES.store=PRICES_tmp.store
+WHERE WHERE DB.SALES.date > NOW() - INTERVAL 7 DAY;
+GROUP BY category
+
+##### 2
+
+WITH SALES_tmp(category, item, store, qnt, price, revenue) AS (
+SELECT category, DB.SALES.item, DB.SALES.store, qnt, price, price*qnt
+FROM DB.SALES
+INNER JOIN DB.KEY_CATS on DB.SALES.item=DB.KEY_CATS.item
+INNER JOIN DB.PRICES on DB.SALES.item=DB.PRICES.item AND DB.SALES.store=DB.PRICES.store
+WHERE DB.SALES.date > NOW() - INTERVAL 1 YEAR;
+)
+
+SELECT *
+FROM (SELECT category, SUM(qnt) s, SUM(revenue)
+      FROM SALES_tmp
+      GROUP BY category)
+ORDER BY s DESC LIMIT 5
+
+##### 3
+
+SELECT date, 
+       IIF(qnt < AVG(qnt) OVER (ORDER BY date ASC range 14 precending), AVG(qnt) OVER (ORDER BY date ASC range 14 precending), qnt)
+FROM DB.SALES
+WHERE stock=0
+
+
